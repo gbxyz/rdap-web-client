@@ -828,7 +828,7 @@ function processDNSSEC(domain) {
         var td = tr.appendChild(document.createElement('td'));
         td.setAttribute('style', 'vertical-align:top;word-wrap:break-word');
         var code = td.appendChild(document.createElement('code'));
-        code.setAttribute('white-space:nowrap');
+        code.setAttribute('style', 'white-space:nowrap');
         code.appendChild(document.createTextNode(cells[i]));
       }
     }
