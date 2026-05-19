@@ -321,7 +321,8 @@ function sendQuery(url, followReferral=false, followingReferral=true) {
 
         thawUI();
 
-        let msg = 'Unable to perform query. This may be because the '
+        let msg = 'Unable to perform query. This may be caused by a privacy '
+                      + 'extension in your browser, or because the '
                       + 'RDAP server is not properly setting the '
                       + 'Access-Control-Allow-Origin header. If the '
                       + 'problem persists, please contact the server '
@@ -359,42 +360,54 @@ function handleResponse(xhr, followReferral=false, followingReferral=false) {
 
   lastQueriedURL = xhr.responseURL;
 
-  if (404 == xhr.status) {
-    handleError('This object does not exist.');
+  try {
+    const url = new URL(window.location.href);
+    url.search = '?type=' + escape(document.getElementById('type').value) +
+                  '&object=' + escape(document.getElementById('object').value) +
+                  '&follow-referral=' + (document.getElementById('follow-referral').checked ? 1 : 0);
 
-  } else if (200 != xhr.status) {
-    handleError(xhr.status + ' error: ' + xhr.statusText);
+    window.history.pushState(null, window.title, url);
 
-  } else {
-    if (followReferral && xhr.response.links) {
-      for (var i = 0 ; i < xhr.response.links.length ; i++) {
-        var l = xhr.response.links[i];
+  } catch (e) {
+    console.log(e);
 
-        if ('related' == l.rel && 'application/rdap+json' == l.type && l.href.match(/^(https?:|)\/\//i)) {
-          sendQuery(l.href, false, true);
-          return;
+  }
 
-        }
-      }
-    }
+  var div = document.getElementById('output-div');
+  div.innerHTML = '';
 
-    try {
-      var div = document.getElementById('output-div');
-      div.innerHTML = '';
+  if (200 != xhr.status) {
+    if (xhr.response.hasOwnProperty("errorCode")) {
       div.appendChild(processObject(xhr.response, true, followReferral, followingReferral));
 
-      var url = document.createElement('a');
-      url.href = window.location.href;
-      url.search = '?type=' + escape(document.getElementById('type').value) +
-                    '&object=' + escape(document.getElementById('object').value) +
-                    '&follow-referral=' + (document.getElementById('follow-referral').checked ? 1 : 0);
+    } else if (404 == xhr.status) {
+      handleError('This object does not exist.');
 
-      window.history.pushState(null, window.title, url.href);
-
-    } catch (e) {
-      handleError('Exception: "' + e.message + '" on line ' + e.lineNumber);
+    } else {
+      handleError(xhr.status + ' error: ' + xhr.statusText);
 
     }
+    return;
+  }
+
+  if (followReferral && xhr.response.links) {
+    for (var i = 0 ; i < xhr.response.links.length ; i++) {
+      var l = xhr.response.links[i];
+
+      if ('related' == l.rel && 'application/rdap+json' == l.type && l.href.match(/^(https?:|)\/\//i)) {
+        sendQuery(l.href, false, true);
+        return;
+
+      }
+    }
+  }
+
+  try {
+    div.appendChild(processObject(xhr.response, true, followReferral, followingReferral));
+
+  } catch (e) {
+    handleError('Exception: "' + e.message + '" on line ' + e.lineNumber);
+
   }
 }
 
@@ -431,7 +444,7 @@ function processObject(object, toplevel, followReferral=true, followingReferral=
 
     default:
       if (object.hasOwnProperty("errorCode")) {
-        return createErrorNode(object.errorCode + ' error: ' + object.title);
+        processError(object, dl, toplevel);
 
       } else {
         processUnknown(object, dl, toplevel);
@@ -461,6 +474,9 @@ function processObject(object, toplevel, followReferral=true, followingReferral=
 
   } else if (!toplevel) {
     titleText = cardTitles[object.objectClassName];
+
+  } else if (object.hasOwnProperty("errorCode")) {
+    titleText = object.errorCode + " " + object.title;
 
   } else {
     titleText = 'Response (unknown object type)';
@@ -1094,6 +1110,12 @@ function processCIDRs(cidrs) {
     list.appendChild(document.createElement('li')).appendChild(createRDAPLink('https://rdap.org/ip/' + cidr, cidr));
   }
   return list;
+}
+
+function processError(object, dl, toplevel) {
+  if (object.hasOwnProperty("description")) addProperty(dl, "Description:", object.description.join(" "));
+
+  processCommonObjectProperties(object, dl);
 }
 
 function processUnknown(object, dl, toplevel=false) {
