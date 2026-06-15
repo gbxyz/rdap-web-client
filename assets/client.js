@@ -123,6 +123,10 @@ function doQuery() {
     object = object.replace(/^asn?/i, '');
   }
 
+  if ('domain' == typeval || 'nameserver' == typeval) {
+    object = object.replace(/\.$/g, '');
+  }
+
   var queryParams = '?jscard=1';
 
   var url;
