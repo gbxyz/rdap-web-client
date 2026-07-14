@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>404 not found</title>
+  <meta name="robots" content="noindex,follow">
+</head>
+<body>
+  <h1>404 not found</h1>
+  <p>Page not found - go to the <a href="/">home page</a>.</p>
+  <script>
+    __tau_analytics_redirect_url = new URL(
+      "/" + (document.location.search ?? "") + (document.location.hash ?? ""),
+      document.location
+    );
+  </script>
+  <script src="//analytics.tau.uk.com"></script>
+</body>
+</html>
